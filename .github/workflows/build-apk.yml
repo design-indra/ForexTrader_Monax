@@ -23,8 +23,7 @@ jobs:
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          
+          node-version: '20'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -43,9 +42,10 @@ jobs:
           npm install @capacitor/core @capacitor/android
           npm install -g @capacitor/cli
 
-      - name: Capacitor add Android
+      - name: Capacitor init & add Android
         run: |
-          npx cap add android || true
+          npx cap init "ForexTrader Monex" "com.forextrader.monex" --web-dir=out
+          npx cap add android
           npx cap sync android
 
       - name: Decode keystore
