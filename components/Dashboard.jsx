@@ -683,10 +683,10 @@ export default function Dashboard({ userEmail = '', onLogout }) {
             <div className="rounded-2xl border border-slate-700 p-4" style={{ background:'var(--surface-2)' }}>
               <h3 className="text-sm font-bold text-slate-100 mb-3">Reset Demo</h3>
               <div className="flex gap-2">
-                {[1000, 5000, 10000, 50000].map(amt => (
-                  <button key={amt} onClick={() => handleAction('reset', { balance: amt })}
+                {[{idr:500000,label:'Rp 500rb'},{idr:1000000,label:'Rp 1jt'},{idr:5000000,label:'Rp 5jt'},{idr:10000000,label:'Rp 10jt'}].map(({idr,label}) => (
+                  <button key={idr} onClick={() => handleAction('reset', { balance: idr/16500 })}
                     className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-xs font-medium">
-                    ${amt.toLocaleString()}
+                    {label}
                   </button>
                 ))}
               </div>
