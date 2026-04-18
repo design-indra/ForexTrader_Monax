@@ -57,14 +57,16 @@ jobs:
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/forextrader.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $GITHUB_WORKSPACE/forextrader.keystore
+          echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/forextrader.keystore" >> $GITHUB_ENV
+          ls -la $GITHUB_WORKSPACE/forextrader.keystore
 
       - name: Build signed APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=app/forextrader.keystore \
+            -Pandroid.injected.signing.store.file=${{ env.KEYSTORE_PATH }} \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
@@ -73,11 +75,9 @@ jobs:
         run: |
           mkdir -p apk-output
           APK=$(find android -name "*release*.apk" | head -1)
-          if [ -z "$APK" ]; then
-            APK=$(find android -name "*debug*.apk" | head -1)
-          fi
+          if [ -z "$APK" ]; then APK=$(find android -name "*debug*.apk" | head -1); fi
           cp "$APK" apk-output/ForexTrader-Monex.apk
-          echo "✅ APK: $APK"
+          echo "✅ APK siap: $APK"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
