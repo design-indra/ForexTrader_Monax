@@ -30,7 +30,12 @@ const TABS = [
   { id:'settings', label:'Setup',  icon:'⚙️' },
 ];
 
-const fmtUSD  = (n) => `$${(n || 0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 })}`;
+const KURS_DEFAULT = 16500;
+const fmtIDR = (usd, kurs = KURS_DEFAULT) => {
+  const idr = (usd || 0) * kurs;
+  return `Rp ${Math.round(idr).toLocaleString('id-ID')}`;
+};
+const fmtUSD = fmtIDR;
 const fmtPct  = (n) => `${n >= 0 ? '+' : ''}${(n || 0).toFixed(2)}%`;
 const fmtPips = (n) => `${n >= 0 ? '+' : ''}${(n || 0).toFixed(1)}p`;
 const fmtPrice = (n, inst='') => (n||0).toFixed(inst.includes('JPY') ? 3 : 5);
