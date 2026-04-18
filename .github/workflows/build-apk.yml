@@ -14,10 +14,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 11
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Setup Node.js 20
@@ -25,58 +25,43 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept Android licenses
-        run: yes | sdkmanager --licenses || true
+      - name: Accept licenses & install tools
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Install Android build tools
-        run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
 
       - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $HOME/forextrader.keystore
 
-      - name: Init Bubblewrap project
+      - name: Init Bubblewrap TWA
         run: |
           mkdir -p twa-build && cd twa-build
-          bubblewrap init --manifest=https://forextradermifx.up.railway.app/manifest.json \
-            --directory=. \
+          bubblewrap init \
+            --manifest https://forextradermifx.up.railway.app/manifest.json \
+            --directory . \
             --skipPwaValidation
 
-      - name: Update twa-manifest signing config
-        run: |
-          cd twa-build
-          cat twa-manifest.json | \
-          python3 -c "
-          import sys, json
-          d = json.load(sys.stdin)
-          d['signingKey'] = {
-            'path': '$HOME/forextrader.keystore',
-            'alias': '${{ secrets.KEY_ALIAS }}'
-          }
-          print(json.dumps(d, indent=2))
-          " > twa-manifest-signed.json
-          mv twa-manifest-signed.json twa-manifest.json
-
-      - name: Build APK with Bubblewrap
+      - name: Build APK
         run: |
           cd twa-build
           bubblewrap build \
-            --keystoreFile=$HOME/forextrader.keystore \
-            --keystorePassword=${{ secrets.KEYSTORE_PASSWORD }} \
-            --keyAlias=${{ secrets.KEY_ALIAS }} \
-            --keyPassword=${{ secrets.KEY_PASSWORD }}
+            --keystoreFile $HOME/forextrader.keystore \
+            --keystorePassword "${{ secrets.KEYSTORE_PASSWORD }}" \
+            --keyAlias "${{ secrets.KEY_ALIAS }}" \
+            --keyPassword "${{ secrets.KEY_PASSWORD }}"
 
-      - name: Find and rename APK
+      - name: Find and copy APK
         run: |
           mkdir -p apk-output
           APK=$(find twa-build -name "*.apk" | head -1)
-          echo "APK found: $APK"
+          echo "APK: $APK"
           cp "$APK" apk-output/ForexTrader-Monex.apk
 
       - name: Upload APK artifact
@@ -100,11 +85,6 @@ jobs:
             **Broker:** PT Monex Investindo Futures (MIFX)
             **URL:** https://forextradermifx.up.railway.app
             **Build:** #${{ github.run_number }}
-
-            ### Cara Install:
-            1. Download ForexTrader-Monex.apk
-            2. Aktifkan install dari sumber tidak dikenal
-            3. Install APK
           files: apk-output/ForexTrader-Monex.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
