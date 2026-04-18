@@ -37,6 +37,11 @@ jobs:
           BUILD_STATIC: 'true'
           NODE_ENV: production
 
+      - name: Verify out directory
+        run: |
+          ls -la out/ || echo "out/ not found!"
+          ls out/index.html && echo "index.html OK" || echo "index.html missing!"
+
       - name: Install Capacitor
         run: |
           npm install @capacitor/core @capacitor/android
@@ -46,7 +51,7 @@ jobs:
         run: |
           npx cap init "ForexTrader Monex" "com.forextrader.monex" --web-dir=out
           npx cap add android
-          npx cap sync android
+          npx cap copy android
 
       - name: Decode keystore
         run: |
