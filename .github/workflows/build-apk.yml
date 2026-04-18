@@ -14,10 +14,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java 11
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '11'
           distribution: 'temurin'
 
       - name: Setup Node.js 20
@@ -25,59 +25,59 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install dependencies
-        run: npm install
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses || true
 
-      - name: Build Next.js static export
-        run: npm run build
-        env:
-          BUILD_STATIC: 'true'
-          NODE_ENV: production
-
-      - name: Create out dir fallback
-        run: |
-          mkdir -p out
-          if [ ! -f out/index.html ]; then
-            echo "<html><body>ForexTrader Monex</body></html>" > out/index.html
-          fi
-
-      - name: Install Capacitor 5
-        run: |
-          npm install @capacitor/core@5 @capacitor/android@5
-          npm install -g @capacitor/cli@5
-
-      - name: Capacitor setup
-        run: |
-          npx cap init "ForexTrader Monex" "com.forextrader.monex" --web-dir=out
-          npx cap add android
-          npx cap sync android
+      - name: Install Android build tools
+        run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $GITHUB_WORKSPACE/forextrader.keystore
-          echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/forextrader.keystore" >> $GITHUB_ENV
-          ls -la $GITHUB_WORKSPACE/forextrader.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $HOME/forextrader.keystore
 
-      - name: Build signed APK
+      - name: Init Bubblewrap project
         run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=${{ env.KEYSTORE_PATH }} \
-            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+          mkdir -p twa-build && cd twa-build
+          bubblewrap init --manifest=https://forextradermifx.up.railway.app/manifest.json \
+            --directory=. \
+            --skipPwaValidation
 
-      - name: Rename APK
+      - name: Update twa-manifest signing config
+        run: |
+          cd twa-build
+          cat twa-manifest.json | \
+          python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          d['signingKey'] = {
+            'path': '$HOME/forextrader.keystore',
+            'alias': '${{ secrets.KEY_ALIAS }}'
+          }
+          print(json.dumps(d, indent=2))
+          " > twa-manifest-signed.json
+          mv twa-manifest-signed.json twa-manifest.json
+
+      - name: Build APK with Bubblewrap
+        run: |
+          cd twa-build
+          bubblewrap build \
+            --keystoreFile=$HOME/forextrader.keystore \
+            --keystorePassword=${{ secrets.KEYSTORE_PASSWORD }} \
+            --keyAlias=${{ secrets.KEY_ALIAS }} \
+            --keyPassword=${{ secrets.KEY_PASSWORD }}
+
+      - name: Find and rename APK
         run: |
           mkdir -p apk-output
-          APK=$(find android -name "*release*.apk" | head -1)
-          if [ -z "$APK" ]; then APK=$(find android -name "*debug*.apk" | head -1); fi
+          APK=$(find twa-build -name "*.apk" | head -1)
+          echo "APK found: $APK"
           cp "$APK" apk-output/ForexTrader-Monex.apk
-          echo "✅ APK siap: $APK"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -96,9 +96,15 @@ jobs:
           tag_name: v${{ steps.version.outputs.VERSION }}-${{ github.run_number }}
           name: "ForexTrader Monex v${{ steps.version.outputs.VERSION }} (Build #${{ github.run_number }})"
           body: |
-            ## ForexTrader Monex APK
-            Broker: PT Monex Investindo Futures (MIFX)
-            Build: #${{ github.run_number }}
+            ## 📱 ForexTrader Monex APK
+            **Broker:** PT Monex Investindo Futures (MIFX)
+            **URL:** https://forextradermifx.up.railway.app
+            **Build:** #${{ github.run_number }}
+
+            ### Cara Install:
+            1. Download ForexTrader-Monex.apk
+            2. Aktifkan install dari sumber tidak dikenal
+            3. Install APK
           files: apk-output/ForexTrader-Monex.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
