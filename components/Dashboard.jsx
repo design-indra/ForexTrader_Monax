@@ -458,7 +458,7 @@ export default function Dashboard({ userEmail = '', onLogout }) {
                 {config.lotSize >= 1.0 ? '⚠️ Standard lot memerlukan margin besar' :
                  config.lotSize >= 0.1 ? '💡 Mini lot, cocok untuk akun $1.000+' :
                  config.lotSize <= 0.001 ? '🔰 Nano lot, ideal untuk belajar & testing' :
-                 '✅ Mikro lot, rekomendasi untuk akun $100–$999'}
+                 '✅ Mikro lot, rekomendasi untuk akun Rp 500rb–999rb'}
               </div>
             </div>
 
