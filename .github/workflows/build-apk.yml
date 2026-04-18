@@ -20,76 +20,49 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Install deps & build static
-        run: |
-          npm install
-          npm run build
-        env:
-          BUILD_STATIC: 'true'
-          NODE_ENV: production
 
       - name: Create Android TWA project
         run: |
           mkdir -p twa/app/src/main/java/com/forextrader/monex
           mkdir -p twa/app/src/main/res/values
-          mkdir -p twa/app/src/main/res/xml
+          mkdir -p twa/app/src/main/res/mipmap-hdpi
           mkdir -p twa/gradle/wrapper
 
-      - name: Write settings.gradle
+      - name: Write project files
         run: |
           cat > twa/settings.gradle << 'EOF'
           pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
+              repositories { google(); mavenCentral() }
           }
           dependencyResolutionManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
+              repositories { google(); mavenCentral() }
           }
           rootProject.name = "ForexTraderMonex"
           include ':app'
           EOF
 
-      - name: Write build.gradle root
-        run: |
           cat > twa/build.gradle << 'EOF'
           plugins {
               id 'com.android.application' version '8.2.0' apply false
           }
           EOF
 
-      - name: Write app build.gradle
-        run: |
           cat > twa/app/build.gradle << 'EOF'
-          plugins {
-              id 'com.android.application'
-          }
+          plugins { id 'com.android.application' }
           android {
               namespace 'com.forextrader.monex'
               compileSdk 34
               defaultConfig {
                   applicationId 'com.forextrader.monex'
-                  minSdk 19
+                  minSdk 21
                   targetSdk 34
                   versionCode 1
                   versionName '1.1.0'
               }
               buildTypes {
-                  release {
-                      minifyEnabled false
-                  }
+                  release { minifyEnabled false }
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -101,44 +74,45 @@ jobs:
           }
           EOF
 
-      - name: Write AndroidManifest.xml
-        run: |
           cat > twa/app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET"/>
               <application
                   android:label="ForexTrader Monex"
                   android:theme="@style/AppTheme"
-                  android:icon="@mipmap/ic_launcher">
+                  android:allowBackup="true">
                   <activity
                       android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
                       android:exported="true">
                       <meta-data
                           android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                          android:value="https://forextradermifx.up.railway.app" />
+                          android:value="https://forextradermifx.up.railway.app"/>
                       <meta-data
                           android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-                          android:resource="@color/colorPrimary" />
+                          android:resource="@color/colorPrimary"/>
                       <meta-data
                           android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
-                          android:resource="@color/colorPrimary" />
+                          android:resource="@color/colorPrimary"/>
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
+                          android:resource="@color/colorPrimary"/>
                       <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
                       </intent-filter>
                       <intent-filter android:autoVerify="true">
                           <action android:name="android.intent.action.VIEW"/>
                           <category android:name="android.intent.category.DEFAULT"/>
                           <category android:name="android.intent.category.BROWSABLE"/>
-                          <data android:scheme="https" android:host="forextradermifx.up.railway.app"/>
+                          <data android:scheme="https"
+                              android:host="forextradermifx.up.railway.app"/>
                       </intent-filter>
                   </activity>
               </application>
           </manifest>
           EOF
 
-      - name: Write colors.xml
-        run: |
           cat > twa/app/src/main/res/values/colors.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
@@ -146,8 +120,6 @@ jobs:
           </resources>
           EOF
 
-      - name: Write styles.xml
-        run: |
           cat > twa/app/src/main/res/values/styles.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
@@ -157,8 +129,6 @@ jobs:
           </resources>
           EOF
 
-      - name: Write gradle wrapper properties
-        run: |
           cat > twa/gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
@@ -170,24 +140,25 @@ jobs:
       - name: Setup Gradle wrapper
         run: |
           cd twa
-          gradle wrapper --gradle-version 8.2 || true
-          ls -la
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O gradle.zip
+          unzip -q gradle.zip
+          ./gradle-8.2/bin/gradle wrapper
+          chmod +x gradlew
 
       - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $HOME/forextrader.keystore
 
-      - name: Build APK
+      - name: Build signed APK
         run: |
           cd twa
-          chmod +x gradlew
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file=$HOME/forextrader.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
 
-      - name: Find and copy APK
+      - name: Copy APK
         run: |
           mkdir -p apk-output
           APK=$(find twa -name "*.apk" | head -1)
@@ -203,18 +174,24 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        run: |
+          echo "VERSION=1.1.0" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.VERSION }}-${{ github.run_number }}
-          name: "ForexTrader Monex v${{ steps.version.outputs.VERSION }} (Build #${{ github.run_number }})"
+          tag_name: v1.1.0-${{ github.run_number }}
+          name: "ForexTrader Monex v1.1.0 (Build #${{ github.run_number }})"
           body: |
             ## 📱 ForexTrader Monex APK
             **Broker:** PT Monex Investindo Futures (MIFX)
             **URL:** https://forextradermifx.up.railway.app
             **Build:** #${{ github.run_number }}
+
+            ### Cara Install:
+            1. Download ForexTrader-Monex.apk
+            2. Aktifkan install dari sumber tidak dikenal
+            3. Install APK
           files: apk-output/ForexTrader-Monex.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
