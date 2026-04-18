@@ -8,7 +8,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -25,108 +25,23 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install PWABuilder CLI
+        run: npm install -g @pwabuilder/cli
 
-      - name: Accept licenses & install tools
+      - name: Build APK via PWABuilder
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "build-tools;34.0.0" "platforms;android-34"
+          pwa build https://forextradermifx.up.railway.app \
+            --platform androidTWA \
+            --output ./apk-output
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
-      - name: Decode keystore
+      - name: Find APK
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $HOME/forextrader.keystore
+          find apk-output -name "*.apk" | head -5
+          find apk-output -name "*.zip" | head -5
 
-      - name: Create Bubblewrap twa-manifest.json
-        run: |
-          mkdir -p twa-build
-          cat > twa-build/twa-manifest.json << 'EOF'
-          {
-            "packageId": "com.forextrader.monex",
-            "host": "forextradermifx.up.railway.app",
-            "name": "ForexTrader Monex",
-            "launcherName": "FX Monex",
-            "display": "standalone",
-            "themeColor": "#10b981",
-            "navigationColor": "#0f1117",
-            "navigationColorDark": "#0f1117",
-            "navigationDividerColor": "#0f1117",
-            "navigationDividerColorDark": "#0f1117",
-            "backgroundColor": "#0f1117",
-            "enableNotifications": false,
-            "startUrl": "/",
-            "iconUrl": "https://forextradermifx.up.railway.app/icon-512x512.png",
-            "maskableIconUrl": "https://forextradermifx.up.railway.app/icon-512x512.png",
-            "monochromeIconUrl": "https://forextradermifx.up.railway.app/icon-512x512.png",
-            "appVersion": "1",
-            "appVersionName": "1.1.0",
-            "orientation": "portrait",
-            "fingerprints": [],
-            "enableSiteSettingsShortcut": false,
-            "isChromeOSOnly": false,
-            "isMetaQuest": false,
-            "fullScopeUrl": "https://forextradermifx.up.railway.app/",
-            "minSdkVersion": 19,
-            "signingKey": {
-              "path": "$HOME/forextrader.keystore",
-              "alias": "forextrader"
-            },
-            "additionalTrustedOrigins": [],
-            "retainedBundles": [],
-            "features": {
-              "locationDelegation": { "enabled": false },
-              "playBilling": { "enabled": false }
-            },
-            "alphaDependencies": { "enabled": false },
-            "enableWebManifestAppCapabilitiesDelegation": false,
-            "generatorApp": "bubblewrap-cli",
-            "webManifestUrl": "https://forextradermifx.up.railway.app/manifest.json",
-            "fallbackType": "customtabs",
-            "serviceAccountJsonFile": "",
-            "shortcuts": []
-          }
-          EOF
-
-      - name: Build APK with Bubblewrap
-        run: |
-          cd twa-build
-          bubblewrap build \
-            --skipPwaValidation \
-            --keystoreFile $HOME/forextrader.keystore \
-            --keystorePassword "${{ secrets.KEYSTORE_PASSWORD }}" \
-            --keyAlias "forextrader" \
-            --keyPassword "${{ secrets.KEY_PASSWORD }}"
-
-      - name: Find and copy APK
-        run: |
-          mkdir -p apk-output
-          APK=$(find twa-build -name "*.apk" | head -1)
-          echo "APK: $APK"
-          cp "$APK" apk-output/ForexTrader-Monex.apk
-
-      - name: Upload APK artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ForexTrader-Monex-APK
-          path: apk-output/ForexTrader-Monex.apk
+          path: apk-output/
           retention-days: 30
-
-      - name: Get version
-        id: version
-        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.VERSION }}-${{ github.run_number }}
-          name: "ForexTrader Monex v${{ steps.version.outputs.VERSION }} (Build #${{ github.run_number }})"
-          body: |
-            ## 📱 ForexTrader Monex APK
-            **Broker:** PT Monex Investindo Futures (MIFX)
-            **Build:** #${{ github.run_number }}
-          files: apk-output/ForexTrader-Monex.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
