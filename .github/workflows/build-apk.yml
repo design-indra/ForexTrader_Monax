@@ -1,0 +1,94 @@
+name: Build APK - ForexTrader Monex
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js static export
+        run: npm run build
+        env:
+          BUILD_STATIC: 'true'
+          NODE_ENV: production
+
+      - name: Install Capacitor
+        run: |
+          npm install @capacitor/core @capacitor/android
+          npm install -g @capacitor/cli
+
+      - name: Capacitor add Android
+        run: |
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/forextrader.keystore
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=app/forextrader.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+
+      - name: Rename APK
+        run: |
+          mkdir -p apk-output
+          APK=$(find android -name "*release*.apk" | head -1)
+          if [ -z "$APK" ]; then APK=$(find android -name "*debug*.apk" | head -1); fi
+          cp "$APK" apk-output/ForexTrader-Monex.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForexTrader-Monex-APK
+          path: apk-output/ForexTrader-Monex.apk
+          retention-days: 30
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}-${{ github.run_number }}
+          name: "ForexTrader Monex v${{ steps.version.outputs.VERSION }} (Build #${{ github.run_number }})"
+          body: |
+            ## ForexTrader Monex APK
+            Broker: PT Monex Investindo Futures (MIFX)
+            Build: #${{ github.run_number }}
+          files: apk-output/ForexTrader-Monex.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
