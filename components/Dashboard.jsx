@@ -620,7 +620,7 @@ export default function Dashboard({ userEmail = '', onLogout }) {
                   { key:'takeProfitPips', label:'Take Profit',      min:20,  max:200,step:10, suffix:' pips' },
                   { key:'trailingStopPips',label:'Trailing Stop',   min:5,   max:50, step:5,  suffix:' pips' },
                   { key:'maxConsecutiveLosses',label:'Max Consec. Losses',min:1,max:10,step:1,suffix:'x' },
-                  { key:'targetProfitUSD',label:'Target Profit',   min:50,  max:5000,step:50,suffix:'' },
+                  { key:'targetProfitUSD',label:'Target Profit',   min:0.003, max:0.606, step:0.003, suffix:' IDR' },
                   { key:'cooldownSeconds', label:'Cooldown',        min:10,  max:300, step:10, suffix:' sec' },
                 ].map(({ key, label, min, max, step, suffix }) => (
                   <div key={key}>
