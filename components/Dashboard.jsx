@@ -445,14 +445,14 @@ export default function Dashboard({ userEmail = '', onLogout }) {
                 onChange={e => setConfig(c => ({ ...c, lotSize: parseFloat(e.target.value) }))}
                 disabled={isRunning}
                 className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-200 disabled:opacity-50 focus:outline-none focus:border-emerald-500">
-                <option value={0.001}>Nano (0.001) — 100 unit · pip ≈ $0.01</option>
-                <option value={0.01}>Mikro (0.01) — 1.000 unit · pip ≈ $0.10</option>
-                <option value={0.02}>Mikro ×2 (0.02) — 2.000 unit · pip ≈ $0.20</option>
-                <option value={0.05}>Mikro ×5 (0.05) — 5.000 unit · pip ≈ $0.50</option>
-                <option value={0.1}>Mini (0.1) — 10.000 unit · pip ≈ $1.00</option>
-                <option value={0.2}>Mini ×2 (0.2) — 20.000 unit · pip ≈ $2.00</option>
-                <option value={0.5}>Half Lot (0.5) — 50.000 unit · pip ≈ $5.00</option>
-                <option value={1.0}>Standard (1.0) — 100.000 unit · pip ≈ $10.00</option>
+                <option value={0.001}>Nano (0.001) — 100 unit · pip ≈ Rp 165</option>
+                <option value={0.01}>Mikro (0.01) — 1.000 unit · pip ≈ Rp 1.650</option>
+                <option value={0.02}>Mikro ×2 (0.02) — 2.000 unit · pip ≈ Rp 3.300</option>
+                <option value={0.05}>Mikro ×5 (0.05) — 5.000 unit · pip ≈ Rp 8.250</option>
+                <option value={0.1}>Mini (0.1) — 10.000 unit · pip ≈ Rp 16.500</option>
+                <option value={0.2}>Mini ×2 (0.2) — 20.000 unit · pip ≈ Rp 33.000</option>
+                <option value={0.5}>Half Lot (0.5) — 50.000 unit · pip ≈ Rp 82.500</option>
+                <option value={1.0}>Standard (1.0) — 100.000 unit · pip ≈ Rp 165.000</option>
               </select>
               <div className="mt-2 text-xs text-slate-600">
                 {config.lotSize >= 1.0 ? '⚠️ Standard lot memerlukan margin besar' :
