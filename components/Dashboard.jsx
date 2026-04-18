@@ -224,7 +224,7 @@ export default function Dashboard({ userEmail = '', onLogout }) {
   const totalPnl   = demo.totalPnl || 0;
   const pnlPct     = demo.totalPnlPct || 0;
   const startBal   = demo.startBalance || 10000;
-  const target     = riskSettings?.targetProfitUSD || 500;
+  const target     = riskSettings?.targetProfitUSD || 3;
   const progress   = Math.min(100, Math.max(0, ((totalBal - startBal) / (target)) * 100));
   const currentLevel = LEVELS.find(l => l.id === (bot.level || config.level)) || LEVELS[0];
   const signal     = bot.lastSignal;
@@ -620,13 +620,17 @@ export default function Dashboard({ userEmail = '', onLogout }) {
                   { key:'takeProfitPips', label:'Take Profit',      min:20,  max:200,step:10, suffix:' pips' },
                   { key:'trailingStopPips',label:'Trailing Stop',   min:5,   max:50, step:5,  suffix:' pips' },
                   { key:'maxConsecutiveLosses',label:'Max Consec. Losses',min:1,max:10,step:1,suffix:'x' },
-                  { key:'targetProfitUSD',label:'Target Profit',   min:0.003, max:0.606, step:0.003, suffix:' IDR' },
+                  { key:'targetProfitUSD',label:'Target Profit',   min:1, max:100, step:1, suffix:'' },
                   { key:'cooldownSeconds', label:'Cooldown',        min:10,  max:300, step:10, suffix:' sec' },
                 ].map(({ key, label, min, max, step, suffix }) => (
                   <div key={key}>
                     <div className="flex justify-between text-xs mb-1.5">
                       <span className="text-slate-400">{label}</span>
-                      <span className="text-slate-200 font-bold">{riskSettings[key]}{suffix}</span>
+                      <span className="text-slate-200 font-bold">
+  {key === 'targetProfitUSD'
+    ? `Rp ${Math.round((riskSettings[key]||0) * KURS_DEFAULT).toLocaleString('id-ID')}`
+    : `${riskSettings[key]}${suffix}`}
+</span>
                     </div>
                     <input type="range" min={min} max={max} step={step} value={riskSettings[key]}
                       onChange={e => { const v = parseFloat(e.target.value); setRiskSettings(s => ({ ...s, [key]: v })); saveRiskSettings({ [key]: v }); }}
