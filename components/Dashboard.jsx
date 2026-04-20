@@ -688,6 +688,58 @@ export default function Dashboard({ userEmail = '', onLogout }) {
               ))}
             </div>
 
+            {/* Auto Compound */}
+            <div className="rounded-2xl border border-emerald-800/40 p-4" style={{ background:'var(--surface-2)' }}>
+              <h3 className="text-sm font-bold text-slate-100 mb-1">Auto Compounding</h3>
+              <p className="text-xs text-slate-500 mb-3">Lot naik otomatis seiring saldo bertambah</p>
+              <div className="flex items-center justify-between py-2 border-b border-slate-800">
+                <div>
+                  <div className="text-sm text-slate-200" style={{ color: riskSettings?.autoCompound ? '#10b981' : undefined }}>
+                    {riskSettings?.autoCompound ? '🔄 Auto Compound ON' : '🔒 Lot Manual'}
+                  </div>
+                  <div className="text-xs text-slate-600 mt-0.5">
+                    {riskSettings?.autoCompound
+                      ? 'Lot naik otomatis sesuai saldo'
+                      : 'Lot tetap sesuai pilihan UI'}
+                  </div>
+                </div>
+                <button onClick={() => {
+                  const val = !riskSettings?.autoCompound;
+                  setRiskSettings(s => ({ ...s, autoCompound: val }));
+                  saveRiskSettings({ autoCompound: val });
+                }} className={`w-10 h-6 rounded-full transition-colors relative ${riskSettings?.autoCompound ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${riskSettings?.autoCompound ? 'left-5' : 'left-1'}`}/>
+                </button>
+              </div>
+              {/* Tabel tier lot */}
+              {riskSettings?.autoCompound && (
+                <div className="mt-3 space-y-1">
+                  <div className="text-xs text-slate-500 mb-2">Tier lot otomatis:</div>
+                  {[
+                    { min: 'Rp 0', max: 'Rp 499rb', lot: '0.001' },
+                    { min: 'Rp 500rb', max: 'Rp 999rb', lot: '0.01' },
+                    { min: 'Rp 1jt', max: 'Rp 1,9jt', lot: '0.02' },
+                    { min: 'Rp 2jt', max: 'Rp 3,9jt', lot: '0.05' },
+                    { min: 'Rp 4jt', max: 'Rp 8,2jt', lot: '0.1' },
+                    { min: 'Rp 8,2jt', max: 'Rp 16,5jt', lot: '0.2' },
+                    { min: 'Rp 16,5jt', max: 'Rp 49jt', lot: '0.5' },
+                    { min: 'Rp 49jt+', max: '∞', lot: '1.0' },
+                  ].map((tier, i) => {
+                    const currentBal = (isLive && liveBalance ? liveBalance.balance : (demo?.usdBalance || 0)) * KURS_DEFAULT;
+                    const tierMinUSD = [0, 30, 60, 120, 240, 500, 1000, 3000][i];
+                    const tierMaxUSD = [30, 60, 120, 240, 500, 1000, 3000, Infinity][i];
+                    const isActive = currentBal >= tierMinUSD * KURS_DEFAULT && currentBal < tierMaxUSD * KURS_DEFAULT;
+                    return (
+                      <div key={i} className={`flex justify-between text-xs px-2 py-1 rounded-lg ${isActive ? 'bg-emerald-900/40 text-emerald-400' : 'text-slate-600'}`}>
+                        <span>{tier.min} – {tier.max}</span>
+                        <span className="font-bold">{tier.lot} lot {isActive ? '← sekarang' : ''}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Reset balance */}
             <div className="rounded-2xl border border-slate-700 p-4" style={{ background:'var(--surface-2)' }}>
               <h3 className="text-sm font-bold text-slate-100 mb-3">Reset Demo</h3>
